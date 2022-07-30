@@ -21,6 +21,13 @@ def CreateTilemap(mask, tex1_name, tex2_name, blur_amount=7, blur_size=3):
     # Merge images
     final_tex = np.where(mask > 127, tex1, tex2)
 
+    if blur_amount > 0 or blur_size > 0:
+        blurred = cv2.GaussianBlur(final_tex, (blur_amount, blur_amount), 0)
+        contours, hierarchy = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        blur_mask = np.zeros(final_tex.shape, np.uint8)
+        cv2.drawContours(blur_mask, contours, -1, (255, 255, 255), blur_size)
+        final_tex = np.where(blur_mask == [255, 255, 255], blurred, final_tex)
+
     # Save the image
     name = "Tilemaps/" + str(os.path.basename(tex2_name)).split('.')[0] + str(os.path.basename(tex1_name)).split('.')[0] + ".png"
     cv2.imshow(name, final_tex)
