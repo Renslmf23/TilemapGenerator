@@ -1,0 +1,54 @@
+import cv2
+import numpy as np
+from itertools import combinations
+import glob
+import os
+
+
+def CreateTilemap(mask, tex1_name, tex2_name, blur_amount=7, blur_size=3):
+    texture_size = 32
+
+    # Read images, resize and tile:
+    tex1 = cv2.imread(tex1_name)
+    tex2 = cv2.imread(tex2_name)
+
+    tex1 = cv2.resize(tex1, (texture_size, texture_size), interpolation=cv2.INTER_AREA)
+    tex1 = np.tile(tex1, (int(mask.shape[0]/texture_size), int(mask.shape[1]/texture_size), 1))
+
+    tex2 = cv2.resize(tex2, (texture_size, texture_size), interpolation=cv2.INTER_AREA)
+    tex2 = np.tile(tex2, (int(mask.shape[0]/texture_size), int(mask.shape[1]/texture_size), 1))
+
+    # Merge images
+    final_tex = np.where(mask > 127, tex1, tex2)
+
+    # Save the image
+    name = "Tilemaps/" + str(os.path.basename(tex2_name)).split('.')[0] + str(os.path.basename(tex1_name)).split('.')[0] + ".png"
+    cv2.imshow(name, final_tex)
+    if not cv2.imwrite(name, final_tex):
+        raise Exception("Could not write image")
+
+
+if __name__ == "__main__":
+    # Load the mask
+    mask_name = "mask.png"
+
+    mask = cv2.imread(mask_name)
+    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    _, dst = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY_INV)
+    mask = dst[..., np.newaxis]
+
+    # Get all images
+    images = []
+    for img in glob.glob("Images/*.png"):
+        images.append(img)
+
+    # Make non-repeating pairs and combine textures
+    for comb in combinations(images, 2):
+        print(comb)
+        CreateTilemap(mask, comb[0], comb[1], 7, 3)
+
+    # Kill all windows at key press
+    while True:
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            break
